@@ -1,0 +1,129 @@
+﻿@page "/login"
+@layout LogInLayout
+@using ERacuni.Shared.Models;
+@using ERacuniProtoNameSpace;
+@inject NavigationManager _navigationManager;
+
+@inject ERacuniProtoNameSpace.ERacuniProtoServis.ERacuniProtoServisClient ProtoServis
+
+<div class="vertical-center w-100">
+    <label>@porukaZaPrikaz</label>
+    <div class="container login-container">
+        <div class="row">
+            <div class="col-md-3"> </div>
+            <div class="col-md-6 login-form-1">
+                <h3>LOGIN FORMA </h3>
+
+                <div class="form-group">
+                    <input type="text" class="form-control" placeholder="Your username *" @bind-value="@userLogIn.UserName" />
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" placeholder="Your Password *" @bind-value="@passwordLogIn" />
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btnSubmit" value="Login" @onclick="LogIn">Sign In</button>
+                </div>
+                <div class="form-group">
+                    <a style="cursor:pointer" @onclick="() => Registracija()" class="ForgetPwd">Želiš da se registruješ?</a>
+                </div>
+
+                <label>@userLogIn.UserName</label>
+                <label>@passwordLogIn</label>
+            </div>
+            <div class="col-md-3"> </div>
+        </div>
+        @if (Show)
+        {
+            <div class="row">
+                <div class="col-md-3"></div>
+                <div class="col-md-6 login-form-2">
+                    <h3>SIGN UP FORMA </h3>
+
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="First Name *" @bind-value="@userSignUp.firstName" />
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="Last Name *" @bind-value="@userSignUp.lastName" />
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="Username *" @bind-value="@userSignUp.UserName" />
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-control" placeholder="Your Password *" @bind-value="passwordSignUp" />
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btnSubmit" @onclick="SignUp">Sign Up</button>
+                    </div>
+                    <div class="form-group">
+
+                        <a @onclick="()=> Registracija()" class="ForgetPwd" value="Login">Zatvori</a>
+                    </div>
+
+                    <label>@userSignUp.firstName</label>
+                    <label>@userSignUp.lastName</label>
+                    <label>@userSignUp.UserName</label>
+                    <label>@passwordSignUp</label>
+                </div>
+                <div class="col-md-3"></div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+
+    private User userSignUp = new User();
+    private User userLogIn = new User();
+    private string passwordSignUp = string.Empty;
+    private string passwordLogIn = string.Empty;
+    private string porukaZaPrikaz = string.Empty;
+    private bool Show { get; set; }
+
+    private async void SignUp()
+    {
+        RegistrationMsg signupMsg = new RegistrationMsg();
+
+        signupMsg.Username = userSignUp.UserName;
+        signupMsg.Password = passwordSignUp;
+        signupMsg.UserProto = new UserMsg { FirstNameProto = userSignUp.firstName, LastNameProto = userSignUp.lastName };
+        signupMsg.Login = false;
+        var Response = await ProtoServis.RegistrationAsync(signupMsg);
+        if (!Response.Success)
+        {
+            porukaZaPrikaz = Response.Error;
+        }
+        else
+        {
+            porukaZaPrikaz = "Uspesno ste registrovani";
+        }
+        StateHasChanged();
+
+    }
+
+    private async void LogIn()
+    {
+        RegistrationMsg logInMsg = new RegistrationMsg();
+        logInMsg.Username = userLogIn.UserName;
+        logInMsg.Password = passwordLogIn;
+        logInMsg.Login = true;
+        var Response = await ProtoServis.LogInAsync(logInMsg);
+        porukaZaPrikaz = Response.Error;
+        StateHasChanged();
+        if (Response.Success)
+        {
+            _navigationManager.NavigateTo("/", true);
+        }
+
+    }
+
+    private async void LogOut()
+    {
+        var response = await ProtoServis.LogOutAsync(new EmptyMsg());
+        porukaZaPrikaz = response.Error;
+    }
+
+    private void Registracija()
+    {
+        Show = !Show;
+    }
+}

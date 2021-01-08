@@ -1,0 +1,99 @@
+﻿syntax="proto3";
+option csharp_namespace="ERacuniProtoNameSpace";
+
+
+import "google/protobuf/duration.proto";  
+import "google/protobuf/timestamp.proto";
+
+message UserMsg {
+string firstNameProto=1;
+string lastNameProto=2;
+}
+
+
+service ERacuniProtoServis{
+	rpc Registration (RegistrationMsg) returns (StandardReplyMsg);
+	rpc LogIn (RegistrationMsg) returns (StandardReplyMsg);
+	rpc LogOut (EmptyMsg) returns (StandardReplyMsg);
+}
+
+
+
+message StandardReplyMsg {
+	bool Success = 1; 
+	string Error=2; 
+}
+message EmptyMsg{}
+
+message RegistrationMsg {
+
+	string Username = 1;
+	string Password = 2;
+	UserMsg UserProto = 3;
+	bool Login = 4;
+}
+
+message BillMsg{
+	string barcode=1;
+	string titleBill=2;
+	string customerAdress=3;
+	double shippingFee=4;
+	double ransom=5;
+	google.protobuf.Timestamp postingDate=6;
+	google.protobuf.Timestamp receiptDate=7;
+	string wayOfSelling=8;
+}
+message AddBillRequest{
+	BillMsg BillForRequest=1;
+}
+
+message AddBillResponse{
+bool Success=1;
+	BillMsg BillForResponse=2;
+	string Message = 3;
+}
+
+
+
+message ChangeBillResponse{
+	bool Success=1;
+	oneof Type{
+		BillMsg ChangedBill = 2;
+		string Message = 3;
+	}
+}
+
+message DeleteResponse{
+	bool Status =1;
+}
+service BillProtoServis{
+	rpc AddBill(AddBillRequest) returns (AddBillResponse);
+	rpc GetAllBills(EmptyMsg) returns ( stream BillMsg);
+	rpc ChangeBill(BillMsg) returns (ChangeBillResponse);
+	rpc DeleteBill(BillMsg) returns (DeleteResponse);
+	rpc AddProductMSG(ProductMSG) returns(ProductAndBoolMSG);
+	rpc GetAllProduct(EmptyMsg) returns (stream ProductMSG);
+	rpc DeleteProduct(ProductMSG) returns (DeleteResponse);
+
+	rpc ListForReport(ListForReportRequest) returns (stream BillMsg);
+}
+
+message ListForReportRequest{
+	google.protobuf.Timestamp Start=1;
+	google.protobuf.Timestamp End = 2;
+	string wayOfSelling=3;
+	string TypeOfDate=4;
+}
+
+
+message ProductMSG{
+	string IDMSG=1;
+	string titleProductMSG =2;
+	double priceMSG =3;
+	int32 contentProductMSG=4;
+}
+
+message ProductAndBoolMSG{
+	bool Success=1;
+	ProductMSG prodMSG=2;	
+}

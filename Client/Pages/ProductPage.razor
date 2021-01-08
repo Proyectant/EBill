@@ -1,0 +1,272 @@
+﻿@page "/productPage"
+
+
+@using ERacuni.Shared.Models;
+@using ERacuniProtoNameSpace;
+@using ERacuni.Shared;
+@using System.Threading;
+@using Grpc.Core;
+@using ERacuni.Shared.Convertors;
+@using System.Diagnostics;
+
+@inject ERacuniProtoNameSpace.BillProtoServis.BillProtoServisClient ServiceProduct;
+@inject ConvertGRPC ServiceConvert;
+
+    <AuthorizeView>
+        <Authorized>
+            <head>
+                <link rel="stylesheet" href="_content/Radzen.Blazor/css/default-base.css">
+            </head>
+
+            <MatAccordion>
+                <MatExpansionPanel @bind-Expanded="@showMatExpansionPanel">
+                    <MatExpansionPanelSummary>
+                        <MatExpansionPanelHeader><b>Dodaj artikal</b></MatExpansionPanelHeader>
+                    </MatExpansionPanelSummary>
+                    <MatExpansionPanelDetails>
+                        <RadzenFieldset Text="DODAJ ARTIKAL">
+                            <div class="row">
+                                <div class="col-md-4 align-items-center d-flex">
+                                    <RadzenLabel Text="Barcode" />
+                                </div>
+                                <div class="col-md-8">
+                                    <RadzenTextBox style="width: 100%;" Name="Barcode" @onfocusout="()=>SearchIdProduct(IdProduct )" @bind-Value="IdProduct" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 align-items-center d-flex">
+                                    <RadzenLabel Text="Naziv artikla" />
+                                </div>
+                                <div class="col-md-8">
+                                    <RadzenTextBox style="width: 100%;" Name="Naziv artikla" @bind-Value="_product.titleProduct" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 align-items-center d-flex">
+                                    <RadzenLabel Text="Cena artikla" />
+                                </div>
+                                <div class="col-md-8">
+                                    <RadzenNumeric style="width: 100%;" Name="Cena artikla" @bind-Value="_product.price" />
+                                </div>
+                            </div>
+
+                            @if (IsMatDialogEditOpen)
+                            {
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Količina" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenNumeric Disabled="true" style="width: 100%;" Name="Količina" @bind-Value="_product.contentProduct" />
+                                    </div>
+                                </div>
+
+                            }
+
+                            <div class="row">
+                                <div class="col-md-4 align-items-center d-flex">
+                                    @if (IsMatDialogEditOpen)
+                                    {
+                                        <RadzenLabel Text="Dodaj količinu" />
+                                    }
+                                    else
+                                    {
+                                        <RadzenLabel Text="Količina" />
+                                    }
+
+                                </div>
+                                <div class="col-md-8">
+                                    <RadzenNumeric style="width: 100%;" Name="Količina" @bind-Value="AddcontentProduct" />
+                                </div>
+                            </div>
+                            <br />
+                            <RadzenButton Click="CancelSubmit" Text="Otkazi dodavanje" ButtonStyle="ButtonStyle.Danger" Icon="cancel"></RadzenButton>
+                            @if (IsMatDialogEditOpen)
+                            {
+                                <RadzenButton Click="async ()=> await AddNewProduct()" Text="Sačuvaj artikal" ButtonStyle="ButtonStyle.Secondary" Icon="done"></RadzenButton>
+                            }
+                            else
+                            {
+                                <RadzenButton Click="async ()=> await AddNewProduct()" Text="Dodaj artikal" ButtonStyle="ButtonStyle.Secondary" Icon="done"></RadzenButton>
+                            }
+
+                        </RadzenFieldset>
+                    </MatExpansionPanelDetails>
+                </MatExpansionPanel>
+            </MatAccordion>
+            <br />
+            @if (ListOfProducts.Count == 0)
+            {
+                <MatProgressBar Indeterminate="true"></MatProgressBar>
+            }
+            else
+            {
+                <RadzenGrid Data="@ListOfProducts" AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            AllowPaging="true"
+                            PageSize="12"
+                            AllowSorting="true"
+                            TItem="Product"
+                            EmptyText="Nema računa u bazi." ColumnWidth="auto" @ref="RadzenGrid">
+                    <Columns>
+                        <RadzenGridColumn TItem="Product" Property="ID" Title="Barcode" TextAlign="TextAlign.Center" />
+                        <RadzenGridColumn TItem="Product" Property="titleProduct" Title="Naziv artikla" TextAlign="TextAlign.Center" />
+                        <RadzenGridColumn TItem="Product" Property="price" Title="Cena" TextAlign="TextAlign.Center" />
+                        <RadzenGridColumn TItem="Product" Property="contentProduct" Title="Količina" TextAlign="TextAlign.Center" />
+
+                        <RadzenGridColumn TItem="Product" Title="Izmeni" Context="item" Bubble="false" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="auto">
+                            <Template Context="item">
+                                <RadzenButton ButtonStyle="ButtonStyle.Info" Icon="edit" Size="ButtonSize.Medium" Click="@((args) =>CheckForEdit(item))" />
+                            </Template>
+                        </RadzenGridColumn>
+                        <RadzenGridColumn TItem="Product" Title="Obriši" Context="item" Bubble="false" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="auto">
+                            <Template Context="item">
+                                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="backspace" Size="ButtonSize.Medium" Click=@((args) => CheckForDelete(item)) />
+                            </Template>
+                        </RadzenGridColumn>
+                    </Columns>
+                </RadzenGrid>
+            }
+
+            <MatDialog IsOpen="IsMatDialogOpen">
+                <MatDialogContent>
+                    <RadzenFieldset Text="Razmislite dobro ">
+                        <b>Da li ste sigurni da hocete da obrisete ovaj artikal?</b>
+                    </RadzenFieldset>
+                </MatDialogContent>
+                <MatDialogActions>
+                    <RadzenButton Text="Obrisi" ButtonStyle="ButtonStyle.Danger" Click="()=>DeleteProduct(productForDelete)" Icon="delete"></RadzenButton>
+                    <RadzenButton Text="Odustani" ButtonStyle="ButtonStyle.Secondary" Click="()=>IsMatDialogOpen=false" Icon="cancel"></RadzenButton>
+                </MatDialogActions>
+            </MatDialog>
+
+            <MatSnackbar @bind-IsOpen="@snackBarIsOpen" Timeout="4000">
+                <MatSnackbarContent>@Messages</MatSnackbarContent>
+            </MatSnackbar>
+
+
+        </Authorized>
+        <NotAuthorized>
+
+            <MatH3>Žao nam je, ali morate se ulogovati!</MatH3>
+        </NotAuthorized>
+    </AuthorizeView>
+    @code {
+
+        private Product _product { get; set; } = new Product();
+        private Product product { get; set; } = new Product();
+        public List<Product> ListOfProducts = new List<Product>();
+
+        private bool showMatExpansionPanel;
+
+        RadzenGrid<Product> RadzenGrid;
+
+        private bool IsMatDialogEditOpen { get; set; }
+        private bool IsMatDialogOpen { get; set; }
+        private bool snackBarIsOpen { get; set; }
+
+        private Product productForEdit { get; set; } = new Product();
+        private Product productForDelete { get; set; } = new Product();
+
+        private double cena { get; set; }
+        private int AddcontentProduct { get; set; }
+        string IdProduct { get; set; }
+        private string Messages { get; set; }
+
+
+        protected override async Task OnInitializedAsync()
+        {
+
+            var serverStream = ServiceProduct.GetAllProduct(new EmptyMsg());
+
+            await foreach (var item in serverStream.ResponseStream.ReadAllAsync())
+            {
+                ListOfProducts.Add(ServiceConvert.Convert(item));
+            }
+            StateHasChanged();
+        }
+
+
+        public async Task AddNewProduct()
+        {
+
+            _product.contentProduct += AddcontentProduct;
+            _product.ID = IdProduct;
+            var response = await ServiceProduct.AddProductMSGAsync(ServiceConvert.Convert(_product));
+            product = ServiceConvert.Convert(response.ProdMSG);
+            if (response.Success == true)
+            {
+                ListOfProducts.Add(product);
+            }
+            else
+            {
+                if (!IsMatDialogEditOpen)
+                {
+                    ListOfProducts.Where(it => it.ID == product.ID).FirstOrDefault().contentProduct += _product.contentProduct;
+                }
+            }
+            await InvokeAsync(RadzenGrid.Reload);
+            AddcontentProduct = 0;
+            showMatExpansionPanel = false;
+            StateHasChanged();
+        }
+        public void CancelSubmit()
+        {
+            showMatExpansionPanel = false;
+            IsMatDialogEditOpen = false;
+            _product = new Product();
+            IdProduct = "";
+            AddcontentProduct = 0;
+        }
+
+        public void CheckForEdit(Product product)
+        {
+            _product = product;
+            IdProduct = product.ID;
+            AddcontentProduct = 0;
+            showMatExpansionPanel = true;
+            IsMatDialogEditOpen = true;
+        }
+
+        public void CheckForDelete(Product product)
+        {
+            productForDelete = product;
+            IsMatDialogOpen = true;
+        }
+
+        public async void DeleteProduct(Product product)
+        {
+            var response = await ServiceProduct.DeleteProductAsync(ServiceConvert.Convert(product));
+            if (response.Status)
+            {
+                ListOfProducts.Remove(product);
+                IsMatDialogOpen = false;
+                snackBarIsOpen = true;
+                Messages = "Uspešno obrisan artikal!";
+            }
+            else
+            {
+                IsMatDialogOpen = false;
+                snackBarIsOpen = true;
+                Messages = "Niste obrisali artikal, žao nam je!";
+            }
+            await InvokeAsync(RadzenGrid.Reload);
+            StateHasChanged();
+        }
+
+        public void SearchIdProduct(string sa)
+        {
+            if (ListOfProducts.Contains(ListOfProducts.Where(f => f.ID == sa).FirstOrDefault()))
+            {
+                _product = ListOfProducts.Where(f => f.ID == sa).FirstOrDefault();
+                IsMatDialogEditOpen = true;
+            }
+            else
+            {
+                _product = new Product();
+                IsMatDialogEditOpen = false;
+            }
+            StateHasChanged();
+        }
+
+    }

@@ -1,0 +1,17 @@
+﻿
+
+<MatDialog IsOpen="IsMatDialogOpen">
+    <div class="alert alert-info " role="alert" style="background-color:ivory; font-size:larger; font:xx-large">
+        <b>Da li ste sigurni da hocete da obrisete ovaj racun?</b>
+    </div>
+    <div class="alert" role="alertdialog">
+        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="()=>IsMatDialogOpen=false">Obriši</button>
+        <button class="btn btn btn-success" @onclick="()=>IsMatDialogOpen=false">Odustani</button>
+    </div>
+</MatDialog>
+<button class="alert-secondary" @onclick="()=>IsMatDialogOpen=true"> OTVORI</button>
+
+@code {
+    private bool IsMatDialogOpen;
+
+}

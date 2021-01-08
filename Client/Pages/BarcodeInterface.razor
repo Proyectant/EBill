@@ -1,0 +1,36 @@
+﻿
+<h3>Barkod</h3>
+
+<label>Camera</label>
+
+<button class="btn btn-primary"
+        type="button"
+        @onclick="(() => ShowScanBarcode = !ShowScanBarcode)">
+    Skeniraj Kod
+</button>
+<input type="text" class="form-control" style="min-width: 100px;"
+       @bind-value="BarCode"
+       placeholder="BarCode" />
+@if (ShowScanBarcode)
+{
+
+    <BarcodeReader ScanResult="((e) => { BarCode = e; ShowScanBarcode = !ShowScanBarcode; })"
+                   ShowScanBarcode="ShowScanBarcode"
+                   Close="(() => ShowScanBarcode = !ShowScanBarcode)" />
+
+}
+<br />
+<br />
+<br />
+<br />
+
+
+@code{
+
+   
+    bool ShowScanBarcode { get; set; } = false;
+
+    
+    public string? BarCode { get; set; }
+}
+

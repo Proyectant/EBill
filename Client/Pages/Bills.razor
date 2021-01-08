@@ -1,0 +1,32 @@
+﻿@page "/"
+
+<head>
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/default-base.css">
+</head>
+<AuthorizeView>
+    <Authorized>
+        <AddBill BillForSending="BillForSending"
+                 BillFromResponse="BillFromResponse"
+                 success="successFromResponse"></AddBill>
+    </Authorized>
+    <NotAuthorized>
+
+        <MatH3>Žao nam je, ali morate se ulogovati!</MatH3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@*<AddBill BillForSending="BillForSending"
+         BillFromResponse="BillFromResponse"
+         success="successFromResponse"></AddBill>*@
+
+@code {
+    private Bill BillForSending = new Bill();
+    private Bill BillFromResponse = new Bill();
+    private bool successFromResponse;
+    private string messageFromResponse;
+    private List<Bill> ListOfBills = new List<Bill>();
+
+    //    public void ShowBIll(Bill bill) { }
+    //public void EditBill(Bill bill) { }
+    //public void CheckForDelete(Bill bill) { }
+}

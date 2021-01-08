@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ERacuni</title>
+    <base href="/" />
+    <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
+    <link href="ERacuni.Client.styles.css" rel="stylesheet" />
+    <link href="manifest.json" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+    <link href="_content/MatBlazor/dist/matBlazor.css" rel="stylesheet" />
+
+    <script src="_content/BlazorDateRangePicker/clickAndPositionHandler.js"></script>
+    <link rel="stylesheet" href="_content/BlazorDateRangePicker/daterangepicker.min.css" />
+
+    <!-- #region style for amchart -->
+
+    <style>
+        #chartdiv {
+            width: 100%;
+            height: 500px;
+        }
+
+        #chartdiv1 {
+            width: 80%;
+            height: 500px;
+        }
+        #chartdiv2 {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
+
+    <!-- #endregion -->
+</head>
+
+<body>
+    <div id="app">Loading...</div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>navigator.serviceWorker.register('service-worker.js');</script>
+
+    <script src="lib/barcodereader/barcode.js"></script>
+    <script src="lib/barcodereader/qrcode.min.js"></script>
+    <script src="lib/barcodereader/zxing.js"></script>
+
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+    <script src="_content/MatBlazor/dist/matBlazor.js"></script>
+
+    <!--for amcharts-->
+    <script src="css/js amcharts/3DColumnChart.js"></script>
+    <script src="css/js amcharts/PictorialStackedChart.js"></script>
+    <script src="css/js amcharts/Chart.js"></script>
+    <script src="css/js amcharts/ColumnWithRotatedSeries.js"></script>
+    <script src="css/js amcharts/Curvedcolumns.js"></script>
+    <script src="css/js amcharts/RadialHistogram.js"></script>
+    <script src="css/js amcharts/Sortedbarchart.js"></script>
+    <script src="css/js amcharts/Variable-height3DPieChart.js"></script>
+    <script src="css/js amcharts/amcharts.settings/core.js"></script>
+    <script src="css/js amcharts/amcharts.settings/charts.js"></script>
+    <script src="css/js amcharts/amcharts.settings/material.js"></script>
+    <script src="css/js amcharts/amcharts.settings/animated.js"></script>
+    <script src="css/js amcharts/amcharts.settings/kelly.js"></script>
+    <script src="css/js amcharts/amcharts.settings/dataviz.js"></script>
+    <!--end for amcharts-->
+
+</body>
+
+</html>

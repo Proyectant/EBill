@@ -1,0 +1,176 @@
+﻿@page "/report"
+@using ERacuni.Shared.Models
+@using ERacuni.Shared.DTO
+@using ERacuniProtoNameSpace
+@using BlazorDateRangePicker
+@using System.Globalization
+@using Grpc.Core;
+@using Radzen.Blazor
+@using Radzen
+@using ERacuni.Shared.Convertors
+@using System.Diagnostics
+@inject ERacuniProtoNameSpace.BillProtoServis.BillProtoServisClient ServiceBill
+@inject ConvertGRPC ServiceConvert
+
+
+<head>
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/default.css" />
+    @*<script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>*@
+</head>
+@*<AuthorizeView>
+    <Authorized>*@
+        <div class="container">
+            <div class="row">
+                <div class="col-12" style="margin-bottom: 40px; margin-top:20px"><label><b>Izveštaji za korisnike</b></label></div>
+                <br />
+                <MatDivider />
+            </div>
+
+            <div class="row">
+                <div class="col-xl-4" style="position:center">
+                    <div style="margin-bottom: 5px; width: 350px; ">
+                        <DateRangePicker @ref="Picker" OnRangeSelect="OnRangeSelect"
+                                         Culture="@(System.Globalization.CultureInfo.GetCultureInfo("sr-Latn-RS"))">
+                            <PickerTemplate>
+                                <div id="@context.ParentId" @onclick="context.Toggle" style="background: #fff; cursor: pointer; padding: 5px 10px; width: 350px; border: 1px solid #ccc;">
+                                    <i class="oi oi-calendar"></i>&nbsp;
+                                    <span>@context.FormattedRange @(string.IsNullOrEmpty(context.FormattedRange) ? "Izaberite vremenski opseg" : "")</span>
+                                    <i class="oi oi-chevron-bottom float-right"></i>
+                                </div>
+                            </PickerTemplate>
+                            <ButtonsTemplate>
+                                <button class="cancelBtn btn btn-sm btn-default"
+                                        @onclick="@context.ClickCancel" type="button">
+                                    Otkazi
+                                </button>
+                                <button class="applyBtn btn btn-sm btn-primary" @onclick="@context.ClickApply"
+                                        disabled="@(context.TStartDate == null || context.TEndDate == null)"
+                                        type="button">
+                                    Potvrdi
+                                </button>
+                            </ButtonsTemplate>
+                        </DateRangePicker>
+                    </div>
+
+                    <div style="width:350px">
+                        <span style="margin-bottom:5px; width: 350px"> @messageForSelectedPeriod</span>
+                    </div>
+
+                    <div>
+                        <RadzenFieldset Text="Način slanja">
+                            <RadzenRadioButtonList @bind-Value="selectedWayOfSelling" TValue="string" Placeholder="Postom">
+                                <Items>
+                                    <RadzenRadioButtonListItem Value="@("Bankom")" Text="Bankom" TValue="string" />
+                                    <RadzenRadioButtonListItem Value="@("Od kuće")" Text="Od kuće" TValue="string" />
+                                    <RadzenRadioButtonListItem Value="@("Poštom")" Text="Poštom" TValue="string" />
+                                </Items>
+                            </RadzenRadioButtonList>
+                        </RadzenFieldset>
+                    </div>
+
+                    <div>
+                        <RadzenFieldset Text="Željeni datum">
+                            <RadzenRadioButtonList @bind-Value="selectedTypeOfDate" TValue="string" Placeholder="Postom">
+                                <Items>
+                                    <RadzenRadioButtonListItem Value="@("Poslati")" Text="Poslati" TValue="string" />
+                                    <RadzenRadioButtonListItem Value="@("Primljeni")" Text="Primljeni" TValue="string" />
+                                    <RadzenRadioButtonListItem Value="@("Oboje")" Text="Oboje" TValue="string" />
+                                </Items>
+                            </RadzenRadioButtonList>
+                        </RadzenFieldset>
+                    </div>
+                    <div>
+                        <RadzenButton Click="GenerateReport" Text="Generisi Izvestaj" Icon="bar_chart" Style="margin-bottom: 5px; width: 350px" />
+                    </div>
+                    <div>
+                        <RadzenFieldset Text="Analiza izveštaja">
+                            <span>@messageForUser</span>
+                        </RadzenFieldset>
+                    </div>
+                </div>
+
+                <div class="col-xl-8" style="min-width:375px; min-height:400px">
+                        <RadzenGrid Data="@ListOfBills" AllowFiltering="true"
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    AllowPaging="true"
+                                    PageSize="12"
+                                    AllowSorting="true"
+                                    TItem="Bill"
+                                    EmptyText="" ColumnWidth="auto">
+                            <Columns>
+                                <RadzenGridColumn TItem="Bill" Property="barcode" Title="Barcode" TextAlign="TextAlign.Center" />
+                                <RadzenGridColumn TItem="Bill" Property="titleBill" Title="Naziv racuna" TextAlign="TextAlign.Center" />
+                                <RadzenGridColumn TItem="Bill" Property="customerAdress" Title="Adresa mušterije" TextAlign="TextAlign.Center" />
+                                <RadzenGridColumn TItem="Bill" Property="shippingFee" Title="Poštarina" TextAlign="TextAlign.Center" />
+                                <RadzenGridColumn TItem="Bill" Property="ransom" Title="Ukupna Cena" TextAlign="TextAlign.Center" FormatString="{0:#.00}" />
+                                <RadzenGridColumn TItem="Bill" Property="postingDate" Title="Datum slanja" TextAlign="TextAlign.Center" FormatString="{0:dd/MM/yyyy}" />
+                                <RadzenGridColumn TItem="Bill" Property="receiptDate" Title="Datum primanja" TextAlign="TextAlign.Center" FormatString="{0:dd/MM/yyyy}" />
+                                <RadzenGridColumn TItem="Bill" Property="wayOfSelling" Title="Način prodaje" TextAlign="TextAlign.Center" />
+                            </Columns>
+                        </RadzenGrid>
+                </div>
+            </div>
+        </div>
+    @*</Authorized>
+    <NotAuthorized>
+        <MatH3>Žao nam je, ali morate se ulogovati!</MatH3>
+    </NotAuthorized>
+</AuthorizeView>*@
+@code {
+    DateTimeOffset Start;
+    DateTimeOffset End;
+    string startDay;
+    string startMonth;
+    string startYear;
+    string endDay;
+    string endMonth;
+    string endYear;
+    string messageForSelectedPeriod = string.Empty;
+    string selectedWayOfSelling = "Poštom";
+    string selectedTypeOfDate = "Oboje";
+    DateTime defaultDateTime = new DateTime(0001, 1, 1, 0, 0, 0);
+    private Stopwatch sw = new Stopwatch();
+    RadzenGrid<Bill> RadzenGrid;
+    DateRangePicker Picker;
+    public List<Bill> ListOfBills = new List<Bill>();
+    string messageForUser;
+
+    public void OnRangeSelect(DateRange range)
+    {
+        Start = range.Start;
+        End = range.End;
+        startDay = range.Start.Day.ToString();
+        startMonth = range.Start.Month.ToString();
+        startYear = range.Start.Year.ToString();
+
+        endDay = range.End.Day.ToString();
+        endMonth = range.End.Month.ToString();
+        endYear = range.End.Year.ToString();
+        messageForSelectedPeriod = $"izabrali ste period od  {startDay} . {startMonth} . {startYear}  do {endDay} .{endMonth} . {endYear}";
+
+    }
+
+    public async void GenerateReport()
+    {
+        ListOfBills = new List<Bill>();
+        DateAndWayOfSelling dateAndWayOfSelling = new DateAndWayOfSelling();
+        dateAndWayOfSelling.start = Start.DateTime;
+        dateAndWayOfSelling.end = End.DateTime;
+        dateAndWayOfSelling.wayOfSelling = selectedWayOfSelling;
+        dateAndWayOfSelling.TypeOfDate = selectedTypeOfDate;
+
+        var serverStream = ServiceBill.ListForReport(ServiceConvert.Convert(dateAndWayOfSelling));
+        StateHasChanged();
+        sw.Start();
+        await foreach (var item in serverStream.ResponseStream.ReadAllAsync())
+        {
+            ListOfBills.Add(ServiceConvert.Convert(item));
+        }
+        sw.Stop();
+        Console.WriteLine(ListOfBills.Count());
+        messageForUser = $"Datom odabiru odgovara  {ListOfBills.Count}  računa ukupne vrednosti {ListOfBills.Sum(b => b.ransom)} € ";
+        StateHasChanged();
+
+    }
+
+}

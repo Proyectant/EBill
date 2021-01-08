@@ -1,0 +1,121 @@
+﻿@page "/charts"
+@using Grpc.Core
+@using ERacuni.Shared.DTO
+@using ERacuni.Shared.Models
+@using ERacuni.Shared.Convertors
+@using ERacuniProtoNameSpace
+@using System.Diagnostics
+@using Radzen.Blazor
+@inject IJSRuntime JS
+@inject ERacuniProtoNameSpace.BillProtoServis.BillProtoServisClient ServiceBill
+@inject ConvertGRPC ServiceConvert
+
+    <AuthorizeView>
+        <Authorized>
+            <head>
+                <link rel="stylesheet" href="_content/Radzen.Blazor/css/default.css" />
+            </head>
+
+            <div class="container">
+
+                <div class="row">
+                    <div class="col-xl-6" style="position:center">
+                        <RadzenButton Click="GenerisiChart" Text="Broj racuna prema načinu slanja" Icon="bar_chart" Style="margin-bottom: 20px; width: inherit "></RadzenButton>
+                        <div id="chartdiv"></div>
+                    </div>
+                    <div class="col-xl-6" style="position:center">
+                        <RadzenButton Click="GenerisiChart2" Text="Zarada u eurima prema načinu slanja" Icon="bar_chart" Style="margin-bottom: 20px; width: inherit "></RadzenButton>
+                        <div id="chartdiv1"></div>
+
+                    </div>
+
+                </div>
+                <div class="row">
+                    <div class="col-xl-6" style="position:center">
+                        <RadzenButton Click="GenerisiChart3" Text="Nisu primljene / Jesu primljene" Icon="bar_chart" Style="margin-bottom: 20px; width: inherit "></RadzenButton>
+                        <div id="chartdiv2"></div>
+
+                    </div>
+                </div>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+
+            <MatH3>Žao nam je, ali morate se ulogovati!</MatH3>
+        </NotAuthorized>
+    </AuthorizeView>
+    @code {
+        List<Bill> ListOfBills = new List<Bill>();
+        List<ChartWayOfSelling> ListForChart = new List<ChartWayOfSelling>();
+        List<ChartStatus> ListForChart2 = new List<ChartStatus>();
+        private Stopwatch sw = new Stopwatch();
+        string[] WaysOfSelling = { "Poštom", "Bankom", "Od kuće" };
+        DateTime defaultDateTime = new DateTime(0001, 1, 1, 0, 0, 0);
+
+        protected override async Task OnInitializedAsync()
+        {
+            var serverStream = ServiceBill.GetAllBills(new EmptyMsg());
+            sw.Start();
+            await foreach (var item in serverStream.ResponseStream.ReadAllAsync())
+            {
+                ListOfBills.Add(ServiceConvert.Convert(item));
+                if (sw.ElapsedMilliseconds == 5)
+                {
+                    StateHasChanged();
+                }
+            }
+            sw.Stop();
+        }
+
+        public async void GenerisiChart()
+        {
+            ListForChart.Clear();
+            foreach (var way in WaysOfSelling)
+            {
+                ListForChart.Add(new ChartWayOfSelling { Name = way, Ratio = ListOfBills.Where(b => b.wayOfSelling.ToLower() == way.ToLower()).ToList().Count() });
+                StateHasChanged();
+            }
+            await JS.InvokeVoidAsync("GeneratePieChart", ListForChart);
+
+        }
+
+        public async void GenerisiChart2()
+        {
+            ListForChart.Clear();
+            foreach (var way in WaysOfSelling)
+            {
+                ListForChart.Add(new ChartWayOfSelling
+                {
+                    Name = way,
+                    Ratio = ListOfBills.Where(b => b.wayOfSelling.ToLower() == way.ToLower()).ToList().Count(),
+                    Total = Convert.ToDecimal(ListOfBills.Where(b => b.wayOfSelling.ToLower() == way.ToLower()).ToList().Sum(b => b.ransom))
+                });
+                StateHasChanged();
+            }
+            ListForChart.ForEach(i => Console.WriteLine($"{i.Name}  a ukupo para jaajjaja {i.Total}"));
+
+            await JS.InvokeVoidAsync("Daj3DColumnCharts", ListForChart);
+
+        }
+
+        public async void GenerisiChart3()
+        {
+            ListForChart2.Clear();
+
+            ListForChart2.Add(new ChartStatus
+            {
+                Name = "Primljeno",
+                Ratio = ListOfBills.Where(b => !(DateTime.Compare(b.receiptDate, defaultDateTime) == 0)).ToList().Count()
+            }) ;
+            ListForChart2.Add(new ChartStatus
+            {
+                Name = "Nije primljeno",
+                Ratio = ListOfBills.Where(b => (DateTime.Compare(b.receiptDate, defaultDateTime) == 0)).ToList().Count()
+            });
+
+            await JS.InvokeVoidAsync("GenerisiPictorialStackedChart", ListForChart2);
+
+
+        }
+
+    }

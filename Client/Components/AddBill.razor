@@ -1,0 +1,485 @@
+﻿@using ERacuni.Shared.Models;
+@using ERacuniProtoNameSpace;
+@using ERacuni.Shared;
+@using System.Threading;
+@using Grpc.Core;
+@using ERacuni.Shared.Convertors;
+@using System.Diagnostics;
+@using FluentValidation;
+@using Blazored.FluentValidation;
+@using ERacuni.Client.Components.BarcodeReader
+@inject ERacuniProtoNameSpace.BillProtoServis.BillProtoServisClient ServiceBill;
+@inject ConvertGRPC ServiceConvert;
+
+<head>
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/default-base.css">
+</head>
+<MatAccordion>
+    <MatExpansionPanel @bind-Expanded="@showMatExpansionPanel">
+        <MatExpansionPanelSummary>
+            <MatExpansionPanelHeader><b>Dodaj račun</b></MatExpansionPanelHeader>
+        </MatExpansionPanelSummary>
+        <MatExpansionPanelDetails>
+            <RadzenFieldset Text="DODAJ RAČUN">
+                <EditForm Model="@BillForSending" OnValidSubmit="SubmitBill">
+                    <FluentValidationValidator />
+
+                    <div class="row" style="margin-bottom:10px; margin-top:10px">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Barcode" />
+                            <button class="btn btn-primary"
+                                    type="button"
+                                    @onclick="(() => ShowScanBarcode = !ShowScanBarcode)">
+                                Skeniraj
+                            </button>
+                            @if (ShowScanBarcode)
+                            {
+
+                                <BarcodeReader ScanResult="((e) => { BillForSending.barcode=e; ShowScanBarcode = !ShowScanBarcode; })"
+                                               ShowScanBarcode="ShowScanBarcode"
+                                               Close="(()=>ShowScanBarcode=!ShowScanBarcode)" />
+
+                            }
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox style="width: 100%;" Name="Barcode" @bind-Value="@BillForSending.barcode" />
+
+                            <ValidationMessage For="@(() => BillForSending.barcode)" />
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px; margin-top:10px">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Naziv racuna" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox style="width: 100%;" Name="Naziv" @bind-Value="BillForSending.titleBill" />
+                            <ValidationMessage For="@(() => BillForSending.titleBill)" />
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px; margin-top:10px">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Ukupna cena racuna" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenNumeric style="width: 100%;" Name="Ukupno" @bind-Value="BillForSending.ransom" />
+                            <ValidationMessage For="@(() => BillForSending.ransom)" />
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px; margin-top:10px">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Adresa kupca" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox style="width: 100%;" Name="AdresaKupca" @bind-Value="BillForSending.customerAdress" />
+                            <ValidationMessage For="@(() => BillForSending.customerAdress)" />
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px; margin-top:10px">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Postarina" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenNumeric style="width: 100%;" Name="Postarina" @bind-Value="BillForSending.shippingFee" />
+                            <ValidationMessage For="@(() => BillForSending.shippingFee)" />
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px; margin-top:10px">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Datum slanja" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenDatePicker style="width: 100%;" Name="DatumSlanja" @bind-Value="BillForSending.postingDate" />
+                            <ValidationMessage For="@(() => BillForSending.postingDate)" />
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px; margin-top:10px">
+                        <RadzenFieldset Text="NAČIN SLANJA">
+                            <RadzenRadioButtonList @bind-Value="BillForSending.wayOfSelling" TValue="string">
+                                <Items>
+                                    <RadzenRadioButtonListItem Value="@("Poštom")" Text="Poštom" TValue="string" />
+                                    <RadzenRadioButtonListItem Value="@("Bankom")" Text="Bankom" TValue="string" />
+                                    <RadzenRadioButtonListItem Value="@("Od kuće")" Text="Od kuće" TValue="string" />
+                                    <div>
+                                        <ValidationMessage For="@(() => BillForSending.wayOfSelling)" />
+                                    </div>
+                                    <p>@BillForSending.wayOfSelling</p>
+                                </Items>
+                            </RadzenRadioButtonList>
+                        </RadzenFieldset>
+                    </div>
+                    <div class="row" style="margin-bottom:10px; margin-top:10px;">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <MatButton Style="margin-right:10px;" @onclick="CancelSubmit" Icon="cancel" Outlined="true">Otkazi</MatButton>
+                            <MatButton Style="margin-left:10px;" Icon="done" @onsubmit="SubmitBill" Raised="true">Sacuvaj</MatButton>
+                        </div>
+                    </div>
+                </EditForm>
+            </RadzenFieldset>
+        </MatExpansionPanelDetails>
+    </MatExpansionPanel>
+</MatAccordion>
+<br />
+@if (ListOfBills.Count == 0)
+{
+    <MatProgressBar Indeterminate="true"></MatProgressBar>
+}
+else
+{
+    <RadzenGrid Data="@ListOfBills" AllowFiltering="true"
+                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                AllowPaging="true"
+                PageSize="12"
+                AllowSorting="true"
+                TItem="Bill"
+                EmptyText="Nema računa u bazi." ColumnWidth="auto" @ref="RadzenGrid">
+        <Columns>
+            <RadzenGridColumn TItem="Bill" Property="barcode" Title="Barcode" TextAlign="TextAlign.Center" />
+            <RadzenGridColumn TItem="Bill" Property="titleBill" Title="Naziv racuna" TextAlign="TextAlign.Center" />
+            <RadzenGridColumn TItem="Bill" Property="customerAdress" Title="Adresa mušterije" TextAlign="TextAlign.Center" />
+            <RadzenGridColumn TItem="Bill" Property="shippingFee" Title="Poštarina" TextAlign="TextAlign.Center" />
+            <RadzenGridColumn TItem="Bill" Property="ransom" Title="Ukupna Cena" TextAlign="TextAlign.Center" FormatString="{0:#.00}" />
+            <RadzenGridColumn TItem="Bill" Property="postingDate" Title="Datum slanja" TextAlign="TextAlign.Center" FormatString="{0:dd/MM/yyyy}" />
+            <RadzenGridColumn TItem="Bill" Property="receiptDate" Title="Datum primanja" TextAlign="TextAlign.Center" FormatString="{0:dd/MM/yyyy}" />
+            <RadzenGridColumn TItem="Bill" Property="wayOfSelling" Title="Način prodaje" TextAlign="TextAlign.Center" />
+            <RadzenGridColumn TItem="Bill" Title="Izmeni" Context="item" Bubble="false" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="auto">
+                <Template Context="item">
+                    <RadzenButton ButtonStyle="ButtonStyle.Info" Icon="edit" Size="ButtonSize.Medium" Click="@((args) =>CheckForEdit(item))" />
+                </Template>
+            </RadzenGridColumn>
+            <RadzenGridColumn TItem="Bill" Title="Obriši" Context="item" Bubble="false" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="auto">
+                <Template Context="item">
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="backspace" Size="ButtonSize.Medium" Click=@((args) => CheckForDelete(item)) />
+                </Template>
+            </RadzenGridColumn>
+            <RadzenGridColumn TItem="Bill" Context="item" Title="Primljeno" Bubble="false" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="auto">
+                <Template Context="item">
+                    @if (!(DateTime.Compare(item.receiptDate, defaultDateTime) == 0))
+                    {
+                        <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="lost_post_office" Size="ButtonSize.Small" />
+                    }
+                </Template>
+            </RadzenGridColumn>
+        </Columns>
+    </RadzenGrid>
+}
+
+<MatDialog IsOpen="IsMatDialogOpen">
+    <MatDialogContent>
+        <RadzenFieldset Text="Razmislite dobro ">
+            <b>Da li ste sigurni da hocete da obrisete ovaj racun?</b>
+        </RadzenFieldset>
+    </MatDialogContent>
+    <MatDialogActions>
+        <RadzenButton Text="Obrisi" ButtonStyle="ButtonStyle.Danger" Click="()=>DeleteBill(billForDelete)" Icon="delete"></RadzenButton>
+        <RadzenButton Text="Odustani" ButtonStyle="ButtonStyle.Secondary" Click="()=>IsMatDialogOpen=false" Icon="cancel"></RadzenButton>
+    </MatDialogActions>
+</MatDialog>
+
+<MatSnackbar @bind-IsOpen="@snackBarIsOpen" Timeout="3000">
+    <MatSnackbarContent>Nije obrisan iz baze. Nesto nece.</MatSnackbarContent>
+</MatSnackbar>
+<MatSnackbar @bind-IsOpen="@snackBarEditIsOpen" Timeout="3000">
+    <MatSnackbarContent>Nije izmenjen korisnik. Nesto nece.</MatSnackbarContent>
+</MatSnackbar>
+
+<MatDialog IsOpen="IsMatDialogEditOpen">
+    <MatBlazor.MatDialogTitle> Izmena racuna</MatBlazor.MatDialogTitle>
+    <MatDialogContent>
+        @if (receiptDate == defaultDateTime)
+        {
+            <MatChipSet Choice="true" @bind-SelectedChip="selectedChip">
+                <MatChip Label="Nije Primljeno"></MatChip>
+                <MatChip Label="Primljeno"></MatChip>
+            </MatChipSet>
+            @if (selectedChip?.Label == "Primljeno")
+            {
+                <div class="row">
+                    <div class="col-md-4 align-items-center d-flex">
+                        <RadzenLabel Text="Datum prijema" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenDatePicker style="width: 100%;" Name="DatumPrijema" @bind-Value="receiptDate" />
+                    </div>
+                </div>
+            }
+
+        }
+    </MatDialogContent>
+    <MatDialogContent>
+        <RadzenFieldset Text="IZMENI RACUN">
+            <div class="row">
+                <div class="col-md-4 align-items-center d-flex">
+                    <RadzenLabel Text="Naziv racuna" />
+                </div>
+                <div class="col-md-8">
+                    <RadzenTextBox style="width: 100%;" Name="Naziv" @bind-Value="titleBill" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 align-items-center d-flex">
+                    <RadzenLabel Text="Ukupna cena racuna" />
+                </div>
+                <div class="col-md-8">
+                    <RadzenNumeric style="width: 100%;" Name="Ukupno" @bind-Value="ransom" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 align-items-center d-flex">
+                    <RadzenLabel Text="Adresa kupca" />
+                </div>
+                <div class="col-md-8">
+                    <RadzenTextBox style="width: 100%;" Name="AdresaKupca" @bind-Value="customerAdress" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 align-items-center d-flex">
+                    <RadzenLabel Text="Postarina" />
+                </div>
+                <div class="col-md-8">
+                    <RadzenNumeric style="width: 100%;" Name="Postarina" @bind-Value="shippingFee" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 align-items-center d-flex">
+                    <RadzenLabel Text="Datum slanja" />
+                </div>
+                <div class="col-md-8">
+                    <RadzenDatePicker style="width: 100%;" Name="DatumSlanja" @bind-Value="postingDate" />
+                </div>
+            </div>
+            <RadzenFieldset Text="Nacin slanja">
+                <RadzenRadioButtonList @bind-Value="wayOfSelling" TValue="string">
+                    <Items>
+                        <RadzenRadioButtonListItem Value="@("Poštom")" Text="Poštom" TValue="string" />
+                        <RadzenRadioButtonListItem Value="@("Bankom")" Text="Bankom" TValue="string" />
+                        <RadzenRadioButtonListItem Value="@("Od kuće")" Text="Od kuće" TValue="string" />
+                    </Items>
+                </RadzenRadioButtonList>
+            </RadzenFieldset>
+        </RadzenFieldset>
+    </MatDialogContent>
+    <MatDialogActions>
+        <RadzenButton Text="Otkazi" Click="CancelEdit" ButtonStyle="ButtonStyle.Danger" Icon="cancel"></RadzenButton>
+        <RadzenButton Text="Izmeni" Click="()=>EditBill()" Icon=" done" ButtonStyle="ButtonStyle.Secondary"></RadzenButton>
+    </MatDialogActions>
+</MatDialog>
+
+<MatSnackbar @bind-IsOpen="@snackBarIsOpen2" Timeout="3000">
+    <MatSnackbarContent>@messageWhitAddBill</MatSnackbarContent>
+</MatSnackbar>
+<MatSnackbar @bind-IsOpen="@snackBarIsOpen3" Timeout="3000">
+    <MatSnackbarContent>@messageWhitAddBill1</MatSnackbarContent>
+</MatSnackbar>
+
+@code{
+
+    [Parameter]
+    public Bill BillForSending { get; set; }
+    [Parameter]
+    public bool success { get; set; }
+    [Parameter]
+    public string messageFromResponse { get; set; }
+    [Parameter]
+    public Bill BillFromResponse { get; set; } = new Bill();
+
+    public Bill billForReplacing = new Bill();
+    private Bill billForDelete = new Bill();
+    public Bill billForEdit = new Bill();
+
+
+    ///FOR EDIT BILL
+    /// START
+
+    private string barcode { get; set; }
+    private string titleBill { get; set; }
+    private double ransom { get; set; }
+    private string customerAdress { get; set; }
+    private double shippingFee { get; set; }
+    private DateTime postingDate { get; set; }
+    private DateTime receiptDate { get; set; }
+    private string wayOfSelling { get; set; }
+
+    /// END
+
+
+
+    public Bill billForEditCancel = new Bill();
+
+    public Bill originalEditBill = new Bill();
+    RadzenGrid<Bill> RadzenGrid;
+    public List<Bill> ListOfBills = new List<Bill>();
+    private Stopwatch sw = new Stopwatch();
+    private bool IsMatDialogOpen = false;
+    private bool IsMatDialogEditOpen = false;
+
+    private bool snackBarIsOpen;
+    private bool snackBarIsOpen2;
+    private bool snackBarIsOpen3;
+    private bool snackBarEditIsOpen;
+    private bool showMatExpansionPanel;
+    MatChip selectedChip = null;
+    DateTime defaultDateTime = new DateTime(0001, 1, 1, 0, 0, 0);
+
+    private string messageWhitAddBill { get; set; }
+    private string messageWhitAddBill1 { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var serverStream = ServiceBill.GetAllBills(new EmptyMsg());
+        sw.Start();
+        await foreach (var item in serverStream.ResponseStream.ReadAllAsync())
+        {
+            ListOfBills.Add(ServiceConvert.Convert(item));
+            if (sw.ElapsedMilliseconds == 5)
+            {
+                StateHasChanged();
+            }
+        }
+        sw.Stop();
+    }
+
+    public async Task SubmitBill()
+    {
+        AddBillRequest request = new AddBillRequest();
+        if (BillForSending.wayOfSelling == "Od kuće")
+        {
+            BillForSending.receiptDate = DateTime.Now;
+        }
+
+        request.BillForRequest = ServiceConvert.Convert(BillForSending);
+
+        var response = await ServiceBill.AddBillAsync(request);
+        if (response.Success)
+        {
+            BillFromResponse = ServiceConvert.Convert(response.BillForResponse);
+
+            snackBarIsOpen2 = response.Success; //true
+            messageWhitAddBill = response.Message;
+
+            ListOfBills.Add(BillFromResponse);
+            showMatExpansionPanel = false;
+            StateHasChanged();
+        }
+        else
+        {
+            snackBarIsOpen3 = true;
+            messageWhitAddBill1 = response.Message;
+            StateHasChanged();
+        }
+
+        await InvokeAsync(RadzenGrid.Reload);
+        BillFromResponse = new Bill();
+        BillForSending = new Bill();
+
+
+
+    }
+    public void CancelSubmit()
+    {
+        billForEdit = billForEditCancel;
+        showMatExpansionPanel = false;
+        InvokeAsync(RadzenGrid.Reload);
+        StateHasChanged();
+    }
+
+    public void CheckForEdit(Bill bill)
+    {
+        barcode = bill.barcode;
+        titleBill = bill.titleBill;
+        customerAdress = bill.customerAdress;
+        ransom = bill.ransom;
+        shippingFee = bill.shippingFee;
+        postingDate = bill.postingDate;
+        wayOfSelling = bill.wayOfSelling;
+        receiptDate = bill.receiptDate;
+
+        IsMatDialogEditOpen = true;
+        StateHasChanged();
+    }
+
+    public async void EditBill()
+    {
+        Bill bill = new Bill();
+
+        bill.barcode = barcode;
+        bill.ransom = ransom;
+        bill.titleBill = titleBill;
+        bill.customerAdress = customerAdress;
+        bill.shippingFee = shippingFee;
+        bill.wayOfSelling = wayOfSelling;
+        bill.receiptDate = receiptDate;
+
+        if (selectedChip?.Label == "Nije Primljeno")
+        {
+            bill.receiptDate = defaultDateTime;
+        }
+        var response = await ServiceBill.ChangeBillAsync(ServiceConvert.Convert(bill));
+
+        if (response.Success == true)
+        {
+
+            ListOfBills.Where(i => i.barcode == ServiceConvert.Convert(response.ChangedBill).barcode).FirstOrDefault().titleBill = titleBill;           //sa liste njega treba da zamenim
+            ListOfBills.Where(i => i.barcode == ServiceConvert.Convert(response.ChangedBill).barcode).FirstOrDefault().customerAdress = customerAdress; //sa liste njega treba da zamenim
+            ListOfBills.Where(i => i.barcode == ServiceConvert.Convert(response.ChangedBill).barcode).FirstOrDefault().shippingFee = shippingFee;       //sa liste njega treba da zamenim
+            ListOfBills.Where(i => i.barcode == ServiceConvert.Convert(response.ChangedBill).barcode).FirstOrDefault().ransom = ransom;                 //sa liste njega treba da zamenim
+            ListOfBills.Where(i => i.barcode == ServiceConvert.Convert(response.ChangedBill).barcode).FirstOrDefault().postingDate = postingDate;       //sa liste njega treba da zamenim
+            ListOfBills.Where(i => i.barcode == ServiceConvert.Convert(response.ChangedBill).barcode).FirstOrDefault().receiptDate = receiptDate;       //sa liste njega treba da zamenim
+            ListOfBills.Where(i => i.barcode == ServiceConvert.Convert(response.ChangedBill).barcode).FirstOrDefault().wayOfSelling = wayOfSelling;     //sa liste njega treba da zamenim
+
+
+            IsMatDialogEditOpen = false;
+            await InvokeAsync(RadzenGrid.Reload);
+
+        }
+        else
+        {
+            IsMatDialogEditOpen = false;
+            snackBarEditIsOpen = true;
+
+        }
+
+        StateHasChanged();
+
+    }
+    public async Task CancelEdit()
+    {
+
+        IsMatDialogEditOpen = false;
+        StateHasChanged();
+        await RadzenGrid.Reload();
+    }
+
+    public void CheckForDelete(Bill bill)
+    {
+
+        //billForDelete = bill;
+        IsMatDialogOpen = true;
+        StateHasChanged();
+    }
+    public async void DeleteBill(Bill bill)
+    {
+        var response = await ServiceBill.DeleteBillAsync(ServiceConvert.Convert(bill));
+        if (response.Status == true)
+        {
+            ListOfBills.Remove(bill);
+            IsMatDialogOpen = false;
+            await InvokeAsync(RadzenGrid.Reload);
+        }
+        else
+        {
+            IsMatDialogOpen = false;
+            snackBarIsOpen = true;
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 显示扫码界面
+    /// </summary>
+    bool ShowScanBarcode { get; set; } = false;
+
+    /// <summary>
+    /// 条码
+    /// </summary>
+    public string? BarCode { get; set; }
+}
